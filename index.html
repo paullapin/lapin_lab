@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAPIN_LAB — 3D · VR · Web</title>
+<meta name="description" content="LAPIN_LAB — студия 3D-анимации, архитектурной визуализации в Unreal Engine, VR-презентаций и веб-разработки.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@100;200;300;400;500&family=Archivo+Expanded:wght@100;200;300&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#f4f3ee;
+  --bg2:#eceae2;
+  --fg:#161616;
+  --fg-soft:#5a5a55;
+  --line:rgba(20,20,20,0.12);
+  --accent:#161616;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Archivo',sans-serif;
+  --exp:'Archivo Expanded','Archivo',sans-serif;
+  --particle:20,20,20;
+  --trans:0.6s cubic-bezier(0.4,0,0.2,1);
+}
+html[data-theme="dark"]{
+  --bg:#1a1a1f;
+  --bg2:#202027;
+  --fg:#f4f3ee;
+  --fg-soft:#9a9a95;
+  --line:rgba(244,243,238,0.14);
+  --accent:#f4f3ee;
+  --particle:244,243,238;
+}
+
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:var(--sans);font-weight:300;
+  overflow-x:hidden;
+  transition:background var(--trans),color var(--trans);
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:36px 56px;mix-blend-mode:difference;
+}
+.nav-logo{
+  font-family:var(--mono);font-weight:400;
+  font-size:20px;letter-spacing:0.02em;
+  color:#fff;text-decoration:none;
+}
+.nav-right{display:flex;align-items:center;gap:14px}
+.theme-toggle{mix-blend-mode:normal}
+.nav-bar{width:5px;height:22px;background:#fff;display:inline-block}
+.nav-menu{
+  font-family:var(--mono);font-weight:400;
+  font-size:18px;letter-spacing:0.01em;color:#fff;
+  text-decoration:none;
+}
+.nav-menu a{color:#fff;text-decoration:none;opacity:0.65;transition:opacity 0.2s}
+.nav-menu a:hover{opacity:1}
+
+/* Theme toggle — sits inside nav, left of the pipe */
+.theme-toggle{
+  width:46px;height:24px;border-radius:12px;
+  border:1px solid var(--line);background:var(--bg2);
+  cursor:pointer;display:flex;align-items:center;
+  padding:3px;flex:0 0 auto;
+  transition:background var(--trans),border-color var(--trans);
+}
+.theme-knob{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--fg);
+  transition:transform var(--trans),background var(--trans);
+}
+html[data-theme="dark"] .theme-knob{transform:translateX(22px)}
+
+/* HERO */
+#hero{
+  position:relative;height:100vh;min-height:640px;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;
+}
+#particle-canvas{position:absolute;inset:0;z-index:1}
+.hero-wordmark{
+  position:relative;z-index:2;
+  font-family:var(--exp);font-weight:100;
+  font-size:clamp(48px,15vw,220px);
+  letter-spacing:-0.02em;line-height:1;
+  color:var(--fg);white-space:nowrap;
+  pointer-events:none;
+  transition:color var(--trans);
+  mix-blend-mode:normal;
+}
+.wm-underscore{
+  --grad-pos:50%;
+  background:linear-gradient(90deg,
+    #8b5cf6 0%, #a855f7 25%, #d946ef 50%, #ec4899 75%, #8b5cf6 100%);
+  background-size:300% 100%;
+  background-position:var(--grad-pos) 50%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+  animation:wmShift 6s linear infinite;
+}
+@keyframes wmShift{
+  0%{background-position:0% 50%}
+  100%{background-position:300% 50%}
+}
+.hero-hint{
+  position:absolute;bottom:44px;left:56px;z-index:2;
+  font-family:var(--mono);font-size:12px;
+  letter-spacing:0.08em;color:var(--fg-soft);
+  pointer-events:none;
+}
+.hero-hint .blink{animation:blink 1.4s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.hero-coords{
+  position:absolute;bottom:44px;right:56px;z-index:2;
+  font-family:var(--mono);font-size:12px;
+  letter-spacing:0.08em;color:var(--fg-soft);
+  text-align:right;pointer-events:none;
+}
+
+/* Generic section */
+section{padding:120px 56px}
+.eyebrow{
+  font-family:var(--mono);font-size:13px;
+  letter-spacing:0.06em;color:var(--fg-soft);
+  margin-bottom:56px;display:flex;align-items:center;gap:14px;
+}
+.eyebrow .bar{
+  width:5px;height:18px;
+  background:linear-gradient(180deg,
+    #8b5cf6 0%, #a855f7 25%, #d946ef 50%, #ec4899 75%, #8b5cf6 100%);
+  background-size:100% 300%;
+  animation:barShift 6s linear infinite;
+}
+@keyframes barShift{
+  0%{background-position:50% 0%}
+  100%{background-position:50% 300%}
+}
+
+/* SERVICES */
+#services .head{
+  font-family:var(--exp);font-weight:100;
+  font-size:clamp(40px,7vw,96px);letter-spacing:-0.02em;
+  line-height:0.95;margin-bottom:72px;
+}
+.svc-list{border-top:1px solid var(--line)}
+.svc-row{
+  display:grid;grid-template-columns:80px 1fr auto;
+  gap:32px;align-items:center;
+  padding:40px 0;border-bottom:1px solid var(--line);
+  cursor:pointer;transition:padding-left 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+.svc-row:hover{padding-left:24px}
+.svc-num{font-family:var(--mono);font-size:14px;color:var(--fg-soft)}
+.svc-mid{display:flex;flex-direction:column;gap:10px}
+.svc-name{
+  font-family:var(--sans);font-weight:300;
+  font-size:clamp(24px,3.5vw,42px);letter-spacing:-0.01em;line-height:1.05;
+}
+.svc-desc{font-size:15px;color:var(--fg-soft);max-width:560px;line-height:1.6}
+.svc-stack{
+  font-family:var(--mono);font-size:12px;color:var(--fg-soft);
+  letter-spacing:0.04em;text-align:right;white-space:nowrap;
+}
+.svc-arrow{
+  font-family:var(--mono);font-size:22px;
+  opacity:0;transform:translateX(-12px);
+  transition:opacity 0.3s,transform 0.3s;
+}
+.svc-row:hover .svc-arrow{opacity:1;transform:translateX(0)}
+
+/* PORTFOLIO */
+#portfolio{background:var(--bg2);transition:background var(--trans)}
+#portfolio .head{
+  font-family:var(--exp);font-weight:100;
+  font-size:clamp(40px,7vw,96px);letter-spacing:-0.02em;
+  line-height:0.95;margin-bottom:72px;
+}
+.cases{display:grid;grid-template-columns:repeat(12,1fr);gap:24px}
+.case{
+  border:1px solid var(--line);overflow:hidden;
+  cursor:pointer;position:relative;background:var(--bg);
+  transition:transform 0.5s cubic-bezier(0.4,0,0.2,1),border-color var(--trans),background var(--trans);
+}
+.case:hover{transform:translateY(-6px)}
+.c-1{grid-column:span 7}
+.c-2{grid-column:span 5}
+.c-3{grid-column:span 5}
+.c-4{grid-column:span 7}
+.case-viz{
+  height:300px;position:relative;overflow:hidden;
+  display:flex;align-items:flex-end;padding:24px;
+  background:
+    repeating-linear-gradient(45deg,transparent,transparent 12px,var(--line) 12px,var(--line) 13px);
+}
+.case-idx{
+  position:absolute;top:24px;left:24px;
+  font-family:var(--mono);font-size:13px;color:var(--fg-soft);
+}
+.case-tag{
+  position:absolute;top:24px;right:24px;
+  font-family:var(--mono);font-size:12px;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--fg-soft);
+  border:1px solid var(--line);padding:5px 12px;
+}
+.case-big{
+  font-family:var(--exp);font-weight:100;
+  font-size:clamp(28px,4vw,52px);letter-spacing:-0.02em;
+  line-height:0.92;opacity:0.14;
+}
+.case-body{padding:28px}
+.case-cat{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;color:var(--fg-soft);margin-bottom:12px}
+.case-title{font-family:var(--sans);font-weight:400;font-size:24px;letter-spacing:-0.01em;margin-bottom:10px}
+.case-desc{font-size:14px;color:var(--fg-soft);line-height:1.7}
+
+/* ABOUT */
+#about .grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}
+.about-big{
+  font-family:var(--exp);font-weight:100;
+  font-size:clamp(32px,4.5vw,64px);letter-spacing:-0.02em;
+  line-height:1.02;margin-bottom:40px;
+}
+.about-text{font-size:16px;line-height:1.9;color:var(--fg-soft);max-width:520px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:8px}
+.stat-num{font-family:var(--exp);font-weight:100;font-size:64px;line-height:1;margin-bottom:12px}
+.stat-label{font-family:var(--mono);font-size:12px;letter-spacing:0.06em;color:var(--fg-soft)}
+.team{margin-top:64px;border-top:1px solid var(--line)}
+.team-row{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:22px 0;border-bottom:1px solid var(--line);
+}
+.team-name{font-family:var(--sans);font-weight:400;font-size:20px}
+.team-role{font-family:var(--mono);font-size:13px;color:var(--fg-soft)}
+
+/* CONTACT */
+#contact{background:var(--bg2);transition:background var(--trans);position:relative;overflow:hidden}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;position:relative;z-index:1}
+.contact-big{
+  font-family:var(--exp);font-weight:100;
+  font-size:clamp(40px,6vw,88px);letter-spacing:-0.02em;
+  line-height:0.95;margin-bottom:40px;
+}
+.contact-text{font-size:16px;line-height:1.8;color:var(--fg-soft);margin-bottom:40px;max-width:420px}
+.tg-link{
+  display:inline-flex;align-items:center;gap:12px;
+  font-family:var(--mono);font-size:15px;
+  color:var(--fg);text-decoration:none;
+  border:1px solid var(--fg);padding:16px 28px;
+  transition:background var(--trans),color var(--trans);
+}
+.tg-link:hover{background:var(--fg);color:var(--bg)}
+.phone{font-family:var(--mono);font-size:14px;color:var(--fg-soft);margin-top:20px}
+
+.form{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line)}
+.field{display:flex;flex-direction:column;gap:8px;padding:20px 0;border-bottom:1px solid var(--line)}
+.field label{font-family:var(--mono);font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--fg-soft)}
+.field input,.field select,.field textarea{
+  background:transparent;border:none;outline:none;
+  font-family:var(--sans);font-weight:300;font-size:18px;color:var(--fg);
+  padding:4px 0;width:100%;
+}
+.field select{cursor:pointer}
+.field select option{background:var(--bg);color:var(--fg)}
+.field textarea{resize:vertical;min-height:60px;line-height:1.5}
+.field input::placeholder,.field textarea::placeholder{color:var(--fg-soft);opacity:0.5}
+.submit{
+  margin-top:32px;align-self:flex-start;
+  font-family:var(--mono);font-size:14px;letter-spacing:0.06em;
+  background:var(--fg);color:var(--bg);border:none;
+  padding:18px 40px;cursor:pointer;
+  transition:opacity 0.2s,background var(--trans),color var(--trans);
+}
+.submit:hover{opacity:0.82}
+.success{display:none;margin-top:24px;font-family:var(--mono);font-size:14px;color:var(--fg)}
+
+/* FOOTER */
+footer{
+  padding:48px 56px;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;
+}
+.foot-logo{font-family:var(--mono);font-size:16px}
+.foot-copy{font-family:var(--mono);font-size:12px;color:var(--fg-soft)}
+.foot-links{display:flex;gap:28px}
+.foot-links a{font-family:var(--mono);font-size:12px;color:var(--fg-soft);text-decoration:none;transition:color 0.2s}
+.foot-links a:hover{color:var(--fg)}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(36px);transition:opacity 0.9s cubic-bezier(0.4,0,0.2,1),transform 0.9s cubic-bezier(0.4,0,0.2,1)}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+@media(max-width:880px){
+  nav{padding:24px}
+  .nav-menu{font-size:14px}
+  .nav-logo{font-size:15px}
+  section{padding:72px 24px}
+  .hero-hint,.hero-coords{left:24px;right:24px;font-size:11px}
+  .svc-row{grid-template-columns:40px 1fr;gap:16px}
+  .svc-stack,.svc-arrow{display:none}
+  .cases{grid-template-columns:1fr}
+  .c-1,.c-2,.c-3,.c-4{grid-column:span 1}
+  #about .grid,.contact-grid{grid-template-columns:1fr;gap:48px}
+  .stats{gap:32px}
+  footer{padding:32px 24px;flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#hero" class="nav-logo">LAPIN_LAB</a>
+  <div class="nav-right">
+    <button class="theme-toggle" id="theme-toggle" aria-label="Сменить тему"><span class="theme-knob"></span></button>
+    <span class="nav-bar"></span>
+    <span class="nav-menu"><a href="#about">About</a>_<a href="#portfolio">Projects</a>_<a href="#services">Features</a></span>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <canvas id="particle-canvas"></canvas>
+  <h1 class="hero-wordmark">LAPIN<span class="wm-underscore" id="wm-underscore">_</span>LAB</h1>
+  <div class="hero-hint">[ move_cursor_to_disturb_field ]<span class="blink">_</span></div>
+  <div class="hero-coords">3D / UNREAL / VR / WEB<br>EST. 2020 — MOSCOW</div>
+</section>
+
+<!-- SERVICES -->
+<section id="services">
+  <p class="eyebrow reveal"><span class="bar"></span>Features_</p>
+  <h2 class="head reveal">Что мы<br>создаём</h2>
+  <div class="svc-list">
+    <div class="svc-row reveal">
+      <div class="svc-num">_01</div>
+      <div class="svc-mid">
+        <div class="svc-name">3D-анимация и визуализация</div>
+        <div class="svc-desc">Фотореалистичные рендеры, продуктовые ролики, motion graphics. От концепта до финального кадра.</div>
+      </div>
+      <div class="svc-stack">Blender / C4D<br>Houdini / Octane <span class="svc-arrow">→</span></div>
+    </div>
+    <div class="svc-row reveal">
+      <div class="svc-num">_02</div>
+      <div class="svc-mid">
+        <div class="svc-name">Архитектурная анимация</div>
+        <div class="svc-desc">Интерактивные облёты и туры в Unreal Engine 5. Объекты ещё до начала строительства.</div>
+      </div>
+      <div class="svc-stack">Unreal Engine 5<br>Lumen / Nanite <span class="svc-arrow">→</span></div>
+    </div>
+    <div class="svc-row reveal">
+      <div class="svc-num">_03</div>
+      <div class="svc-mid">
+        <div class="svc-name">VR интерактивные презентации</div>
+        <div class="svc-desc">Иммерсивный опыт для продаж, выставок и обучения. Полное погружение в проект.</div>
+      </div>
+      <div class="svc-stack">Meta Quest<br>WebXR / Unity <span class="svc-arrow">→</span></div>
+    </div>
+    <div class="svc-row reveal">
+      <div class="svc-num">_04</div>
+      <div class="svc-mid">
+        <div class="svc-name">Веб-дизайн и разработка</div>
+        <div class="svc-desc">Сайты с 3D-графикой на Three.js и WebGL. Интерфейсы, которые остаются в памяти.</div>
+      </div>
+      <div class="svc-stack">Three.js / WebGL<br>React / GLSL <span class="svc-arrow">→</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- PORTFOLIO -->
+<section id="portfolio">
+  <p class="eyebrow reveal"><span class="bar"></span>Projects_</p>
+  <h2 class="head reveal">Избранное</h2>
+  <div class="cases">
+    <div class="case c-1 reveal">
+      <div class="case-viz"><span class="case-idx">_01</span><span class="case-tag">Unreal</span><span class="case-big">REAL ESTATE</span></div>
+      <div class="case-body"><div class="case-cat">Архитектурная анимация</div><div class="case-title">ЖК «Речной парк»</div><div class="case-desc">Полный цикл от BIM-модели до интерактивного тура в Unreal Engine 5. Три видовые точки, 14 планировок.</div></div>
+    </div>
+    <div class="case c-2 reveal">
+      <div class="case-viz"><span class="case-idx">_02</span><span class="case-tag">VR</span><span class="case-big">SHOWROOM</span></div>
+      <div class="case-body"><div class="case-cat">VR-презентация</div><div class="case-title">Виртуальный автосалон</div><div class="case-desc">Шоурум для Meta Quest с конфигуратором цветов и комплектаций в реальном времени.</div></div>
+    </div>
+    <div class="case c-3 reveal">
+      <div class="case-viz"><span class="case-idx">_03</span><span class="case-tag">Web</span><span class="case-big">FASHION</span></div>
+      <div class="case-body"><div class="case-cat">Веб-разработка</div><div class="case-title">Лендинг fashion-бренда</div><div class="case-desc">Three.js-сцена с интерактивными 3D-продуктами. Конверсия выросла на 34%.</div></div>
+    </div>
+    <div class="case c-4 reveal">
+      <div class="case-viz"><span class="case-idx">_04</span><span class="case-tag">CGI</span><span class="case-big">PRODUCT FILM</span></div>
+      <div class="case-body"><div class="case-cat">3D-анимация</div><div class="case-title">Ролик для tech-стартапа</div><div class="case-desc">60-секундный CGI-фильм для запуска продукта: моделирование, motion, саунд-дизайн.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <p class="eyebrow reveal"><span class="bar"></span>About_</p>
+  <div class="grid">
+    <div>
+      <div class="about-big reveal">Небольшая команда.<br>Большие миры.</div>
+      <p class="about-text reveal">LAPIN_LAB — студия из Москвы на стыке 3D, архитектуры и интерактивных технологий. Мы соединяем авторский визуальный язык с инженерной точностью. Каждый проект — отдельный мир, который мы строим с нуля.</p>
+      <div class="team reveal">
+        <div class="team-row"><span class="team-name">Art Director</span><span class="team-role">3D / Visual</span></div>
+        <div class="team-row"><span class="team-name">3D Generalist</span><span class="team-role">Unreal / Blender</span></div>
+        <div class="team-row"><span class="team-name">VR Developer</span><span class="team-role">WebXR / Unity</span></div>
+        <div class="team-row"><span class="team-name">Web Developer</span><span class="team-role">Three.js / React</span></div>
+      </div>
+    </div>
+    <div class="stats reveal">
+      <div><div class="stat-num">40+</div><div class="stat-label">PROJECTS_DONE</div></div>
+      <div><div class="stat-num">05</div><div class="stat-label">YEARS_ACTIVE</div></div>
+      <div><div class="stat-num">03</div><div class="stat-label">COUNTRIES</div></div>
+      <div><div class="stat-num">98%</div><div class="stat-label">SATISFACTION</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="contact-grid">
+    <div>
+      <p class="eyebrow reveal"><span class="bar"></span>Contact_</p>
+      <div class="contact-big reveal">Расскажите<br>о проекте</div>
+      <p class="contact-text reveal">Обсудим задачу, сроки и бюджет. Отвечаем в течение нескольких часов.</p>
+      <a href="https://t.me/LAPIN_LAB_bot" class="tg-link reveal" target="_blank" rel="noopener">→ Telegram</a>
+      <p class="phone reveal">+7 906 609-99-11</p>
+    </div>
+    <div class="reveal">
+      <form class="form" id="form" action="https://formspree.io/f/mojbboop" method="POST">
+        <div class="field"><label>Имя</label><input type="text" name="Имя" placeholder="Иван Иванов" required></div>
+        <div class="field"><label>Телефон / Telegram</label><input type="text" name="Контакт" placeholder="+7 или @username" required></div>
+        <div class="field"><label>Тип проекта</label>
+          <select name="Тип проекта">
+            <option value="" disabled selected>выберите услугу</option>
+            <option>3D-анимация и визуализация</option>
+            <option>Архитектурная анимация (Unreal)</option>
+            <option>VR-презентация</option>
+            <option>Веб-разработка</option>
+            <option>Несколько услуг</option>
+          </select>
+        </div>
+        <div class="field"><label>О проекте</label><textarea name="О проекте" placeholder="задача, сроки, бюджет…"></textarea></div>
+        <button type="submit" class="submit">ОТПРАВИТЬ_ЗАЯВКУ →</button>
+        <div class="success" id="success">// заявка отправлена. ответим в ближайшее время.</div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-logo">LAPIN_LAB</div>
+  <div class="foot-copy">© 2025 — lapin-lab.ru</div>
+  <div class="foot-links">
+    <a href="#about">About</a>
+    <a href="#portfolio">Projects</a>
+    <a href="https://t.me/LAPIN_LAB_bot" target="_blank">Telegram</a>
+  </div>
+</footer>
+
+<!-- THREE.JS — attractor particle field reacting to cursor -->
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const canvas = document.getElementById('particle-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x000000,0);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50,1,0.1,200);
+camera.position.set(0,0,46);
+
+const hero = document.getElementById('hero');
+function resize(){
+  const w=hero.clientWidth,h=hero.clientHeight;
+  renderer.setSize(w,h);
+  camera.aspect=w/h;camera.updateProjectionMatrix();
+}
+resize();
+addEventListener('resize',resize);
+
+// --- Particle system (attractor-driven) ---
+const COUNT = (innerWidth < 880) ? 6000 : 14000;
+const positions = new Float32Array(COUNT*3);
+const velocities = new Float32Array(COUNT*3);
+const seeds = new Float32Array(COUNT);
+
+for(let i=0;i<COUNT;i++){
+  // start as a fluffy 3D cloud, not a thin ring
+  const a = Math.random()*Math.PI*2;
+  const r = 12 + Math.random()*22;
+  positions[i*3]   = Math.cos(a)*r + (Math.random()-0.5)*12;
+  positions[i*3+1] = Math.sin(a)*r*0.7 + (Math.random()-0.5)*12;
+  positions[i*3+2] = (Math.random()-0.5)*26;
+  velocities[i*3]=velocities[i*3+1]=velocities[i*3+2]=0;
+  seeds[i]=Math.random();
+}
+
+const geo = new THREE.BufferGeometry();
+geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+
+// per-particle colors (start at theme color), animated near the cursor
+const pColors = new Float32Array(COUNT*3);
+geo.setAttribute('color', new THREE.BufferAttribute(pColors,3));
+
+function particleColor(){
+  const s=getComputedStyle(document.body).getPropertyValue('--particle').trim().split(',').map(Number);
+  return new THREE.Color(s[0]/255,s[1]/255,s[2]/255);
+}
+// fill the color buffer with the current theme color
+function resetColors(){
+  const c=particleColor();
+  for(let i=0;i<COUNT;i++){ pColors[i*3]=c.r; pColors[i*3+1]=c.g; pColors[i*3+2]=c.b; }
+  if(geo.attributes.color) geo.attributes.color.needsUpdate=true;
+}
+resetColors();
+
+// purple↔pink palette the cursor paints with
+const HOT_A={r:0.545,g:0.361,b:0.965}; // #8b5cf6 violet
+const HOT_B={r:0.925,g:0.282,b:0.6};   // #ec4899 pink
+
+const mat = new THREE.PointsMaterial({
+  vertexColors:true,
+  size: 0.14, transparent:true, opacity:0.85,
+  sizeAttenuation:true, depthWrite:false,
+});
+const points = new THREE.Points(geo, mat);
+scene.add(points);
+
+// --- Two fixed attractors + one mouse attractor ---
+const A1 = new THREE.Vector3(-11,4,0);
+const A2 = new THREE.Vector3(11,-4,0);
+const mouse = new THREE.Vector3(0,0,0);
+let mouseActive = false;
+
+const raycaster = new THREE.Vector3();
+function toWorld(clientX,clientY){
+  const rect=hero.getBoundingClientRect();
+  const nx=((clientX-rect.left)/rect.width)*2-1;
+  const ny=-((clientY-rect.top)/rect.height)*2+1;
+  // project onto z=0 plane
+  const vec=new THREE.Vector3(nx,ny,0.5).unproject(camera);
+  const dir=vec.sub(camera.position).normalize();
+  const dist=-camera.position.z/dir.z;
+  return camera.position.clone().add(dir.multiplyScalar(dist));
+}
+const wmUnderscore = document.getElementById('wm-underscore');
+hero.addEventListener('mousemove',e=>{
+  const w=toWorld(e.clientX,e.clientY);
+  mouse.set(w.x,w.y,0);mouseActive=true;
+  // cursor X (and a touch of Y) shift the purple↔pink gradient
+  const rect=hero.getBoundingClientRect();
+  const fx=(e.clientX-rect.left)/rect.width;   // 0..1
+  const fy=(e.clientY-rect.top)/rect.height;   // 0..1
+  const gp=(fx*0.8 + fy*0.2)*300;              // map into 0..300%
+  wmUnderscore.style.setProperty('--grad-pos', gp.toFixed(1)+'%');
+  wmUnderscore.style.animationPlayState='paused';
+});
+hero.addEventListener('mouseleave',()=>{
+  mouseActive=false;
+  wmUnderscore.style.animationPlayState='running';
+});
+hero.addEventListener('touchmove',e=>{
+  if(e.touches[0]){const w=toWorld(e.touches[0].clientX,e.touches[0].clientY);mouse.set(w.x,w.y,0);mouseActive=true;}
+},{passive:true});
+hero.addEventListener('touchend',()=>mouseActive=false);
+
+const pos = geo.attributes.position.array;
+const force = new THREE.Vector3();
+
+function applyAttractor(i, A, strength, spin, core){
+  const dx=A.x-pos[i*3], dy=A.y-pos[i*3+1], dz=A.z-pos[i*3+2];
+  const lenSq = dx*dx+dy*dy+dz*dz;
+  const d2 = lenSq+4.0;
+  // pull that fades with distance
+  const f = strength/d2;
+  force.x += dx*f; force.y += dy*f; force.z += dz*f;
+  // orbital spin (perpendicular in xy) — keeps particles circling, not collapsing
+  force.x += -dy*f*spin;
+  force.y +=  dx*f*spin;
+  // short-range repulsion so the cloud never crushes into a line.
+  // `core` sets how big the empty centre (and thus the ring) is.
+  if(lenSq < core*core){
+    const dist = Math.sqrt(lenSq)+0.0001;
+    const rep = (core-dist)*0.55/dist;
+    force.x -= dx*rep; force.y -= dy*rep; force.z -= dz*rep;
+  }
+}
+
+// Cursor: gently PUSHES particles away within `radius`, with a light swirl,
+// so the cloud puffs outward on hover instead of collapsing inward.
+function applyCursorRepel(i, C, strength, swirl, radius){
+  const dx=pos[i*3]-C.x, dy=pos[i*3+1]-C.y, dz=pos[i*3+2]-C.z;
+  const lenSq=dx*dx+dy*dy+dz*dz;
+  if(lenSq>radius*radius) return;
+  const dist=Math.sqrt(lenSq)+0.0001;
+  const falloff=(radius-dist)/radius;        // 1 at centre → 0 at edge
+  const f=strength*falloff/dist;
+  force.x += dx*f; force.y += dy*f; force.z += dz*f;   // push outward
+  // light tangential swirl for a vortex feel
+  force.x += -dy*f*swirl;
+  force.y +=  dx*f*swirl;
+}
+
+let active=true;
+new IntersectionObserver(e=>active=e[0].isIntersecting,{threshold:0.05}).observe(canvas);
+
+function tick(){
+  requestAnimationFrame(tick);
+  if(!active)return;
+
+  const now=performance.now();
+  const zt=now*0.0006;                 // z-noise time, computed once per frame
+
+  // current theme color (for particles far from the cursor)
+  const base=particleColor();
+  const baseR=base.r, baseG=base.g, baseB=base.b;
+  const colTime=now*0.0008;            // drives the violet↔pink shimmer
+  const COLOR_R=18;                    // cursor color influence radius
+
+  for(let i=0;i<COUNT;i++){
+    force.set(0,0,0);
+    // left attractor: now matches the old right ring, clockwise, 3x slower spin
+    applyAttractor(i, A1, 11, -0.365, 11.0);
+    // right attractor: even bigger, counter-clockwise, 3x slower spin
+    applyAttractor(i, A2, 15, 0.365, 15.0);
+    if(mouseActive) applyCursorRepel(i, mouse, 5, 0.8, 16);
+
+    // keep the cloud three-dimensional forever: pull gently back toward a
+    // target z-shell plus cheap per-particle wobble so it never flattens.
+    const zTarget=(seeds[i]-0.5)*14;
+    force.z += (zTarget - pos[i*3+2])*0.05 + Math.sin(zt + seeds[i]*100)*0.25;
+
+    // integrate with mild damping — slower, floatier motion
+    let vx=(velocities[i*3]   + force.x*0.010)*0.965;
+    let vy=(velocities[i*3+1] + force.y*0.010)*0.965;
+    let vz=(velocities[i*3+2] + force.z*0.010)*0.965;
+
+    // floor the orbital speed so particles never lose energy and spiral in.
+    // normalise via 1/sqrt(speedSq) — no atan2/cos/sin needed.
+    const spSq=vx*vx+vy*vy;
+    if(spSq<0.30){                      // ~0.55^2
+      const sp=Math.sqrt(spSq);
+      const k=(0.55-sp)*0.04;
+      if(sp>0.001){ const inv=k/sp; vx+=vx*inv; vy+=vy*inv; }
+      else { vx+=(seeds[i]-0.5)*k; vy+=(0.5-seeds[i])*k; }
+    }
+
+    velocities[i*3]=vx; velocities[i*3+1]=vy; velocities[i*3+2]=vz;
+    pos[i*3]   += vx*0.06;
+    pos[i*3+1] += vy*0.06;
+    pos[i*3+2] += vz*0.06;
+
+    // --- color: violet↔pink near cursor, theme color when far ---
+    let tr=baseR, tg=baseG, tb=baseB;   // target = theme color by default
+    if(mouseActive){
+      const cdx=pos[i*3]-mouse.x, cdy=pos[i*3+1]-mouse.y;
+      const cd2=cdx*cdx+cdy*cdy;
+      if(cd2<COLOR_R*COLOR_R){
+        const prox=1-Math.sqrt(cd2)/COLOR_R;          // 1 at cursor → 0 at edge
+        // mix between violet and pink by position + time for a shimmer
+        const mixv=0.5+0.5*Math.sin(colTime+pos[i*3]*0.15+seeds[i]*6.28);
+        const hr=HOT_A.r+(HOT_B.r-HOT_A.r)*mixv;
+        const hg=HOT_A.g+(HOT_B.g-HOT_A.g)*mixv;
+        const hb=HOT_A.b+(HOT_B.b-HOT_A.b)*mixv;
+        const p=prox*prox;                            // sharper falloff
+        tr=baseR+(hr-baseR)*p; tg=baseG+(hg-baseG)*p; tb=baseB+(hb-baseB)*p;
+      }
+    }
+    // ease current color toward target (smooth fade in/out)
+    pColors[i*3]   += (tr-pColors[i*3])  *0.08;
+    pColors[i*3+1] += (tg-pColors[i*3+1])*0.08;
+    pColors[i*3+2] += (tb-pColors[i*3+2])*0.08;
+  }
+  geo.attributes.position.needsUpdate=true;
+  geo.attributes.color.needsUpdate=true;
+
+  // slow drift of the two base attractors
+  const t=now*0.0002;
+  A1.x=-18+Math.sin(t)*4; A1.y=5+Math.cos(t*0.8)*3;
+  A2.x= 18+Math.cos(t)*4; A2.y=-4+Math.sin(t*0.8)*3;
+
+  points.rotation.z += 0.0002;
+  renderer.render(scene,camera);
+}
+tick();
+
+// expose color refresh for theme switch
+// the animation loop already eases every particle toward the live theme
+// color each frame, so a theme switch fades in smoothly with no snap.
+window.__refreshParticles=()=>{};
+</script>
+
+<script>
+// --- Theme: auto by local time of day (dark for evening/night, dark if undetectable) ---
+const root=document.documentElement;
+const toggle=document.getElementById('theme-toggle');
+(function initThemeByTime(){
+  let dark=true; // default to dark if detection fails
+  try{
+    const h=new Date().getHours();
+    if(Number.isFinite(h)){
+      // light during daytime 07:00–18:59, dark for evening/night
+      dark=!(h>=7 && h<19);
+    }
+  }catch(e){ dark=true; }
+  root.setAttribute('data-theme', dark?'dark':'light');
+})();
+toggle.addEventListener('click',()=>{
+  const dark=root.getAttribute('data-theme')==='dark';
+  root.setAttribute('data-theme', dark?'light':'dark');
+  if(window.__refreshParticles) setTimeout(window.__refreshParticles,50);
+});
+
+// --- Reveal ---
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');obs.unobserve(e.target)}}),{threshold:0.12});
+document.querySelectorAll('.reveal').forEach((el,i)=>{el.style.transitionDelay=(i%4*0.06)+'s';obs.observe(el)});
+
+// --- Form (Formspree) ---
+document.getElementById('form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const form=e.target;
+  const btn=form.querySelector('.submit');
+  const success=document.getElementById('success');
+  btn.textContent='ОТПРАВКА…';
+  try{
+    const res=await fetch(form.action,{
+      method:'POST',
+      body:new FormData(form),
+      headers:{'Accept':'application/json'}
+    });
+    if(res.ok){
+      btn.style.display='none';
+      success.style.display='block';
+      form.reset();
+    }else{
+      btn.textContent='ОШИБКА — ПОПРОБУЙТЕ СНОВА';
+    }
+  }catch(err){
+    btn.textContent='ОШИБКА СЕТИ — ПОПРОБУЙТЕ СНОВА';
+  }
+});
+</script>
+</body>
+</html>
